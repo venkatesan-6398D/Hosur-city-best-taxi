@@ -1,0 +1,10 @@
+{
+  "appId": "com.hosurcitybesttaxi.app",
+  "appName": "Hosur city best taxi",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}

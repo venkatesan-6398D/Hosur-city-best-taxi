@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hosur City Best Taxi</string>
+    <string name="title_activity_main">Hosur City Best Taxi</string>
+    <string name="package_name">com.hosurcitybesttaxi.app</string>
+    <string name="custom_url_scheme">com.hosurcitybesttaxi.app</string>
+</resources>

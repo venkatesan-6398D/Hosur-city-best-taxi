@@ -1,0 +1,107 @@
+.driver-portal {
+  min-height: 100vh;
+  padding: 36px max(20px, calc((100% - 1080px) / 2));
+  background: #07111f;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.driver-header,
+.driver-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.driver-header {
+  margin-bottom: 24px;
+}
+
+.driver-header p {
+  color: #aab7c8;
+}
+
+.driver-header h1,
+.driver-card h1,
+.driver-card h2 {
+  color: #ffc107;
+}
+
+.driver-card {
+  margin-bottom: 16px;
+  padding: 22px;
+  border: 1px solid #26364b;
+  border-radius: 16px;
+  background: #101d2e;
+}
+
+.driver-login-form,
+.driver-verify-form {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.driver-card input {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #40516a;
+  border-radius: 8px;
+  background: #07111f;
+  color: white;
+}
+
+.driver-card button,
+.driver-header button,
+.driver-directions {
+  display: inline-block;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffc107;
+  color: #07111f;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.driver-booking-list {
+  display: grid;
+  gap: 14px;
+}
+
+.driver-booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.driver-card .driver-complete-button {
+  background: #22c55e;
+}
+
+.driver-card .driver-cancel-button {
+  background: #ff637d;
+}
+
+.driver-message {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #192a3d;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .driver-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .driver-header-actions {
+    width: 100%;
+  }
+}

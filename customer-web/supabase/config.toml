@@ -1,0 +1,4 @@
+project_id = "hosur-city-best-taxi"
+
+[functions.booking-otp]
+verify_jwt = false
