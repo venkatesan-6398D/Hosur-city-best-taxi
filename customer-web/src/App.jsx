@@ -3,6 +3,29 @@ import "./App.css";
 import { supabase } from "./supabase";
 import DriverPortal from "./DriverPortal";
 
+function getBookingWhatsAppUrl(booking) {
+  const details = [
+    "New taxi booking request - Hosur City Best Taxi",
+    `Booking ID: ${booking.id}`,
+    `Customer: ${booking.customerName}`,
+    `Phone: ${booking.customerPhone}`,
+    `Trip type: ${booking.tripType}`,
+    `Pickup: ${booking.pickup}`,
+    `Drop: ${booking.drop}`,
+    `Date: ${booking.date}`,
+    `Time: ${booking.time}`,
+    `Car: ${booking.car}`,
+    ...(booking.tripType === "Hourly Rental"
+      ? [`Rental hours: ${booking.rentalHours}`]
+      : []),
+    ...(booking.pickupMapUrl
+      ? [`Pickup map: ${booking.pickupMapUrl}`]
+      : []),
+  ].join("\n");
+
+  return `https://wa.me/918438001838?text=${encodeURIComponent(details)}`;
+}
+
 function getDefaultPickupSchedule() {
   const pickupDate = new Date();
   const pad = (value) => String(value).padStart(2, "0");
@@ -251,6 +274,7 @@ function App() {
   const [pickupCoordinates, setPickupCoordinates] = useState(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingMessage, setBookingMessage] = useState("");
+  const [bookingWhatsAppUrl, setBookingWhatsAppUrl] = useState("");
   const [activeBooking, setActiveBooking] = useState(() => {
     try {
       const savedBooking = window.sessionStorage.getItem("hosurTaxiBooking");
@@ -282,6 +306,10 @@ function App() {
     car: vehicles[0].bookingName,
     tripType: "Local Taxi",
     rentalHours: "",
+  });
+  const [scheduleEditing, setScheduleEditing] = useState({
+    date: true,
+    time: true,
   });
 
   useEffect(() => {
@@ -376,6 +404,12 @@ function App() {
   const handleChange = (e) => {
     if (e.target.name === "date" || e.target.name === "time") {
       scheduleTouchedRef.current[e.target.name] = true;
+      if (e.target.value) {
+        setScheduleEditing((current) => ({
+          ...current,
+          [e.target.name]: false,
+        }));
+      }
     }
     setFormData({
       ...formData,
@@ -428,8 +462,17 @@ function App() {
 
   const handleBooking = async (e) => {
     e.preventDefault();
+    if (!loggedIn) {
+      setBookingMessage("Please login or create an account to book a ride.");
+      setAuthMode("login");
+      setAuthOpen(true);
+      return;
+    }
+
+    const whatsappTab = window.open("about:blank", "_blank");
     setBookingSubmitting(true);
     setBookingMessage("");
+    setBookingWhatsAppUrl("");
 
     try {
       const { data, error } = await supabase.functions.invoke("booking-otp", {
@@ -474,8 +517,8 @@ function App() {
 
       setBookingMessage(
         data?.smsSent
-          ? "Booking saved. A confirmation SMS has been sent to your phone. Our driver will call to confirm your trip."
-          : "Booking saved, but we could not send a confirmation SMS. Please contact us; our driver will call to confirm your trip.",
+          ? "Booking saved. Your booking details are ready in WhatsApp—tap Send to notify us. A confirmation SMS has also been sent to your phone."
+          : "Booking saved, but we could not send a confirmation SMS. Your booking details are ready in WhatsApp—tap Send to notify us.",
       );
       const savedBooking = {
         id: data.bookingId,
@@ -490,6 +533,19 @@ function App() {
         rentalHours: formData.rentalHours,
         status: "Pending confirmation",
       };
+      const whatsappUrl = getBookingWhatsAppUrl({
+        ...savedBooking,
+        pickupMapUrl,
+      });
+      setBookingWhatsAppUrl(whatsappUrl);
+      if (whatsappTab) {
+        try {
+          whatsappTab.location.href = whatsappUrl;
+        } catch (error) {
+          console.error("Unable to open the booking in WhatsApp:", error);
+          whatsappTab.close();
+        }
+      }
       try {
         window.sessionStorage.setItem(
           "hosurTaxiBooking",
@@ -502,6 +558,7 @@ function App() {
       setBookingPanelOpen(true);
       setBookingPanelMessage("");
       scheduleTouchedRef.current = { date: false, time: false };
+      setScheduleEditing({ date: true, time: true });
       setFormData((current) => ({
         ...current,
         name: "",
@@ -517,6 +574,7 @@ function App() {
       setPickupCoordinates(null);
       setDropCoordinates(null);
     } catch (error) {
+      whatsappTab?.close();
       setBookingMessage(`Booking failed: ${error.message}`);
     } finally {
       setBookingSubmitting(false);
@@ -1275,6 +1333,30 @@ function App() {
               </div>
             </div>
 
+            {!loggedIn ? (
+              <div className="booking-login-gate">
+                <h3>Login to book your ride</h3>
+                <p>
+                  Please log in or create a customer account before entering
+                  your trip details.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthMessage("");
+                    setAuthOpen(true);
+                  }}
+                >
+                  Login / Create account
+                </button>
+                {bookingMessage && (
+                  <p className="booking-result" role="status">
+                    {bookingMessage}
+                  </p>
+                )}
+              </div>
+            ) : (
             <form className="booking-form" onSubmit={handleBooking}>
               <div
                 className="booking-trip-types"
@@ -1434,27 +1516,61 @@ function App() {
               )}
               <div className="form-row">
                 <div className="input-group">
-                  <label>Travel Date</label>
-
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    required
-                  />
+                  <label htmlFor="booking-date">Travel Date</label>
+                  {scheduleEditing.date ? (
+                    <input
+                      id="booking-date"
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      required
+                    />
+                  ) : (
+                    <div className="booking-schedule-summary">
+                      <span>{formData.date}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setScheduleEditing((current) => ({
+                            ...current,
+                            date: true,
+                          }))
+                        }
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="input-group">
-                  <label>Pickup Time</label>
-
-                  <input
-                    type="time"
-                    name="time"
-                    value={formData.time}
-                    onChange={handleChange}
-                    required
-                  />
+                  <label htmlFor="booking-time">Pickup Time</label>
+                  {scheduleEditing.time ? (
+                    <input
+                      id="booking-time"
+                      type="time"
+                      name="time"
+                      value={formData.time}
+                      onChange={handleChange}
+                      required
+                    />
+                  ) : (
+                    <div className="booking-schedule-summary">
+                      <span>{formData.time}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setScheduleEditing((current) => ({
+                            ...current,
+                            time: true,
+                          }))
+                        }
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1492,7 +1608,18 @@ function App() {
                   {bookingMessage}
                 </p>
               )}
+              {bookingWhatsAppUrl && (
+                <a
+                  className="booking-whatsapp-link"
+                  href={bookingWhatsAppUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Send booking details on WhatsApp
+                </a>
+              )}
             </form>
+            )}
           </div>
         </section>
 

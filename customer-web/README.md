@@ -1,5 +1,20 @@
 # React + Vite
 
+## Deploying on Hostinger
+
+Build the website from the `customer-web` directory:
+
+```powershell
+npm run build
+```
+
+Upload the **contents** of `customer-web/dist` into the domain's Hostinger
+document root (usually `public_html`), including `index.html`, the `assets`
+folder, and the hidden `.htaccess` file. Do not upload the source folder or put
+the `dist` folder itself inside `public_html`; the document root must contain
+`index.html` directly. The `.htaccess` file also routes direct requests such as
+`/driver` back to the single-page app.
+
 ## Booking confirmation SMS
 
 After a booking is saved, the `booking-otp` Edge Function sends the customer a

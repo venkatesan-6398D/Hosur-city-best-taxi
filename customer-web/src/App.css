@@ -1431,6 +1431,60 @@ section[id] {
   backdrop-filter: blur(15px);
 }
 
+.booking-login-gate {
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  background: linear-gradient(
+    145deg,
+    rgba(247, 241, 227, 0.055),
+    rgba(247, 241, 227, 0.02)
+  );
+  color: var(--white);
+  text-align: center;
+}
+
+.booking-login-gate h3 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.booking-login-gate p {
+  margin: 0 0 20px;
+  color: var(--gray);
+  line-height: 1.6;
+}
+
+.booking-login-gate button,
+.booking-schedule-summary button {
+  border: 1px solid var(--yellow);
+  border-radius: 9px;
+  padding: 10px 16px;
+  color: #0b0b0b;
+  background: var(--yellow);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.booking-schedule-summary {
+  min-height: 52px;
+  padding: 0 12px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--white);
+  background: rgba(11, 11, 11, 0.8);
+}
+
+.booking-schedule-summary button {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1620,6 +1674,16 @@ section[id] {
   font-size: 13px;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+.booking-whatsapp-link {
+  display: block;
+  margin-top: 10px;
+  color: #b9f5ca;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: underline;
 }
 
 .form-note {
