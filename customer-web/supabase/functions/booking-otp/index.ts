@@ -139,6 +139,124 @@ const sendBookingConfirmationSms = async ({
   }
 };
 
+const sendBookingWhatsAppNotification = async ({
+  bookingId,
+  car,
+  customerName,
+  customerPhone,
+  dropLocation,
+  pickupLabel,
+  pickupLocation,
+  rentalHours,
+  tripType,
+  travelDate,
+  travelTime,
+}: {
+  bookingId: number;
+  car: string;
+  customerName: string;
+  customerPhone: string;
+  dropLocation: string;
+  pickupLabel: string;
+  pickupLocation: string;
+  rentalHours: number | null;
+  tripType: string;
+  travelDate: string;
+  travelTime: string;
+}): Promise<"sent" | "not_configured" | "failed"> => {
+  const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+  const recipient = Deno.env.get("WHATSAPP_BOOKING_RECIPIENT");
+  const templateName = Deno.env.get("WHATSAPP_BOOKING_TEMPLATE_NAME");
+  const templateLanguage =
+    Deno.env.get("WHATSAPP_BOOKING_TEMPLATE_LANGUAGE") || "en";
+  const graphApiVersion = Deno.env.get("WHATSAPP_GRAPH_API_VERSION");
+
+  if (
+    !accessToken ||
+    !phoneNumberId ||
+    !recipient ||
+    !templateName ||
+    !graphApiVersion
+  ) {
+    console.error("WhatsApp booking notifications are not configured.");
+    return "not_configured";
+  }
+  if (
+    !/^\d+$/.test(phoneNumberId) ||
+    !/^[a-z0-9_]+$/.test(templateName) ||
+    !/^v\d+\.\d+$/.test(graphApiVersion)
+  ) {
+    console.error("WhatsApp booking notification configuration is invalid.");
+    return "failed";
+  }
+
+  try {
+    const recipientPhone = normalizePhone(recipient).replace(/\D/g, "");
+    const pickupDetails =
+      pickupLabel && pickupLabel !== pickupLocation
+        ? `${pickupLabel} - ${pickupLocation}`
+        : pickupLocation;
+    const tripDetails =
+      rentalHours === null ? tripType : `${tripType} (${rentalHours} hours)`;
+    const response = await fetch(
+      `https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: recipientPhone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: templateLanguage },
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  String(bookingId),
+                  customerName,
+                  customerPhone,
+                  tripDetails,
+                  pickupDetails,
+                  dropLocation,
+                  travelDate,
+                  travelTime,
+                  car,
+                ].map((text) => ({ type: "text", text })),
+              },
+            ],
+          },
+        }),
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    const responseBody: { messages?: unknown } | null = await response
+      .json()
+      .catch(() => null);
+    if (
+      !response.ok ||
+      !Array.isArray(responseBody?.messages) ||
+      responseBody.messages.length === 0
+    ) {
+      console.error("WhatsApp booking notification request failed.", response.status);
+      return "failed";
+    }
+
+    return "sent";
+  } catch (error) {
+    console.error(
+      "WhatsApp booking notification request failed.",
+      errorMessage(error),
+    );
+    return "failed";
+  }
+};
+
 const requireDriver = async (request: Request) => {
   const authorization = request.headers.get("Authorization");
   if (!authorization) throw new Error("Driver login required.");
@@ -329,30 +447,35 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: "Booking could not be saved." }, 500);
       }
 
-      const smsStatus = await sendBookingConfirmationSms({
+      const pickupLabel =
+        typeof payload.pickupLabel === "string" ? payload.pickupLabel.trim() : "";
+      const notificationDetails = {
         bookingId: booking.id,
         car,
         customerName,
         customerPhone,
         dropLocation,
-        pickupLabel:
-          typeof payload.pickupLabel === "string" ? payload.pickupLabel.trim() : "",
+        pickupLabel,
         pickupLocation,
         rentalHours,
         tripType,
         travelDate,
         travelTime,
-      });
+      };
+      const [smsStatus, whatsappStatus] = await Promise.all([
+        sendBookingConfirmationSms(notificationDetails),
+        sendBookingWhatsAppNotification(notificationDetails),
+      ]);
 
       return jsonResponse(
         {
           bookingId: booking.id,
           smsSent: smsStatus === "sent",
           smsStatus,
+          whatsappSent: whatsappStatus === "sent",
+          whatsappStatus,
           message:
-            smsStatus === "sent"
-              ? "Booking saved and confirmation SMS sent."
-              : "Booking saved, but the confirmation SMS could not be sent.",
+            "Booking saved.",
         },
         201,
       );

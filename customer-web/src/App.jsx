@@ -469,7 +469,6 @@ function App() {
       return;
     }
 
-    const whatsappTab = window.open("about:blank", "_blank");
     setBookingSubmitting(true);
     setBookingMessage("");
     setBookingWhatsAppUrl("");
@@ -515,11 +514,6 @@ function App() {
         throw new Error(detail);
       }
 
-      setBookingMessage(
-        data?.smsSent
-          ? "Booking saved. Your booking details are ready in WhatsApp—tap Send to notify us. A confirmation SMS has also been sent to your phone."
-          : "Booking saved, but we could not send a confirmation SMS. Your booking details are ready in WhatsApp—tap Send to notify us.",
-      );
       const savedBooking = {
         id: data.bookingId,
         customerName: formData.name.trim(),
@@ -533,18 +527,20 @@ function App() {
         rentalHours: formData.rentalHours,
         status: "Pending confirmation",
       };
-      const whatsappUrl = getBookingWhatsAppUrl({
-        ...savedBooking,
-        pickupMapUrl,
-      });
-      setBookingWhatsAppUrl(whatsappUrl);
-      if (whatsappTab) {
-        try {
-          whatsappTab.location.href = whatsappUrl;
-        } catch (error) {
-          console.error("Unable to open the booking in WhatsApp:", error);
-          whatsappTab.close();
-        }
+      const whatsappSent = data?.whatsappSent === true;
+      const whatsappMessage = whatsappSent
+        ? "Booking saved to Supabase and automatically sent to our WhatsApp."
+        : data?.whatsappStatus === "not_configured"
+          ? "Booking saved to Supabase, but automatic WhatsApp notifications are not configured yet."
+          : "Booking saved to Supabase, but the automatic WhatsApp notification failed.";
+      const smsMessage = data?.smsSent
+        ? "A confirmation SMS was sent to the customer."
+        : "The confirmation SMS could not be sent.";
+      setBookingMessage(`${whatsappMessage} ${smsMessage}`);
+      if (!whatsappSent) {
+        setBookingWhatsAppUrl(
+          getBookingWhatsAppUrl({ ...savedBooking, pickupMapUrl }),
+        );
       }
       try {
         window.sessionStorage.setItem(
@@ -574,7 +570,6 @@ function App() {
       setPickupCoordinates(null);
       setDropCoordinates(null);
     } catch (error) {
-      whatsappTab?.close();
       setBookingMessage(`Booking failed: ${error.message}`);
     } finally {
       setBookingSubmitting(false);
@@ -1600,8 +1595,8 @@ function App() {
               </button>
 
               <small className="form-note">
-                We will send a booking confirmation by SMS. Our driver will call
-                to confirm your trip.
+                Our team will be notified after your booking is saved. The
+                driver will call to confirm your trip.
               </small>
               {bookingMessage && (
                 <p className="booking-result" role="status">
@@ -1615,7 +1610,7 @@ function App() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Send booking details on WhatsApp
+                  Send booking details manually on WhatsApp
                 </a>
               )}
             </form>

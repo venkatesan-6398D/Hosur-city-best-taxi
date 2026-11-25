@@ -22,6 +22,46 @@ confirmation SMS through MSG91. The booking form also shows whether the SMS was
 sent. The driver calls the customer separately to confirm the trip. Drivers can
 review and contact customers in `/driver`.
 
+## Automatic WhatsApp booking notifications
+
+The `booking-otp` Edge Function saves the booking first, then sends a WhatsApp
+template notification to the configured business recipient. To enable it,
+configure Meta WhatsApp Business Cloud API and create an approved Utility
+template named `new_booking_alert` in English (`en`) with this body and
+placeholders in this exact order:
+
+```text
+New taxi booking #{{1}}
+Customer: {{2}}
+Phone: {{3}}
+Trip: {{4}}
+Pickup: {{5}}
+Drop: {{6}}
+Travel date: {{7}} at {{8}}
+Car: {{9}}
+```
+
+Set these as **Supabase Edge Function secrets**. Use a Cloud API-enabled sender
+number and a recipient number that can receive the notification; keep the
+recipient separate from the sender number.
+
+- `WHATSAPP_ACCESS_TOKEN`: Meta Cloud API access token
+- `WHATSAPP_PHONE_NUMBER_ID`: Cloud API sender's phone number ID
+- `WHATSAPP_BOOKING_RECIPIENT`: recipient number with country code, digits only (for example `918438001838`)
+- `WHATSAPP_BOOKING_TEMPLATE_NAME`: approved template name (`new_booking_alert`)
+- `WHATSAPP_BOOKING_TEMPLATE_LANGUAGE`: approved template language code (`en`)
+- `WHATSAPP_GRAPH_API_VERSION`: supported Meta Graph API version (for example `vXX.0`)
+
+Never put the access token in frontend code or `.env` files. After setting the
+secrets in Supabase, deploy the function:
+
+```powershell
+npx supabase functions deploy booking-otp
+```
+
+If WhatsApp is not configured or Meta rejects the notification, the booking
+remains saved in Supabase and the website displays a manual WhatsApp fallback.
+
 In MSG91, configure and approve a transactional SMS Flow/DLT template with
 three variables, in this order: customer name (`VAR1`), booking ID (`VAR2`),
 and trip details (`VAR3`). The message should tell the customer that the booking
